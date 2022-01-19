@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 #%%Load event and position data
 
-event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game11.csv')
-position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game11.csv')
+event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game1.csv')
+position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game1.csv')
 
 #%% Alignemnt of position and event data coordinates
 # event data coordinates with (0|0) beeing the left bottom corner of the pitch / pitch (105m * 68m)
@@ -321,6 +321,7 @@ possessions = possessions.rename (columns = {'index': 'Row'})
 Result = []
 Defensive_success = []
 X_Position = []
+Y_Position =[]
 
 #2.:
 first_half = event_data[(event_data['Event1'] == 'KickOff') &
@@ -341,30 +342,35 @@ for row, attack in possessions.iterrows ():
     # 3. Shot on goal
     if  event_data.loc[[idx]].Event1.item () == 'FinalWhistle' and event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'end_of_half'
         defensive_success = 'unsuccessful'
     
     #Stoppage of Play:
     elif event_data.loc[[idx]].Event1.item () == 'FreeKick' or  event_data.loc[[idx]].Event1.item () == 'Foul' or event_data.loc[[idx]].Event1.item () == 'Offside':
         x_position = event_data.loc[[idx]]['X-Position'].item ()
+        y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'stoppage_of_play'
         defensive_success = 'unsuccessful'
         
     #Ball going out of play (without shot as last action)
     elif  event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal' and (event_data.loc[[idx]].Event1.item () == 'ThrowIn' or event_data.loc[[idx]].Event1.item () == 'GoalKick' or event_data.loc[[idx]].Event1.item () == 'CornerKick'):
         x_position = event_data.loc[[idx]]['X-Position'].item ()
+        y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_out_of_play'
         defensive_success = 'unsuccessful'
     
     #last action of attack is shot at goal:
     elif event_data.loc[[idx-1]].Event1.item () == 'ShotAtGoal':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'ShotAtGoal1'
         defensive_success = 'unsuccessful'
     
     #penultimate action of attack is shot at goal:
     elif event_data.loc[[idx-2]].Event1.item () == 'ShotAtGoal' and event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal':
         x_position = event_data.loc[[idx-2]]['X-Position'].item ()
+        y_position = event_data.loc[[idx-2]]['Y-Position'].item ()
         result = 'ShotAtGoal2'
         defensive_success = 'unsuccessful'
         
@@ -377,6 +383,7 @@ for row, attack in possessions.iterrows ():
     #BallClaiming in first row after possession end:
     elif event_data.loc[[idx]].Event1.item () == 'BallClaiming' and event_data.loc[[idx]].Team.item () != attack.team:
         x_position = event_data.loc[[idx]]['X-Position'].item ()
+        y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_loss_claiming1'
         defensive_success = 'successful'
         
@@ -386,6 +393,7 @@ for row, attack in possessions.iterrows ():
     #BallClaiming in second row after possession end & NO! Tackling in first row after possession change:
     elif event_data.loc[[idx+1]].Event1.item () == 'BallClaiming' and event_data.loc[[idx+1]].Team.item () != attack.team and event_data.loc[[idx]].Event1.item () != 'TacklingGame':
         x_position = event_data.loc[[idx+1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_claiming2'
         defensive_success = 'successful'
 
@@ -395,12 +403,14 @@ for row, attack in possessions.iterrows ():
     #Ballgain after unsuccessful pass: last action of attack is unsuccessful pass & next action is on ball action of other team & no event called BallClaiming:
     elif event_data.loc[[idx-1]].Event1.item () == 'Play' and event_data.loc[[idx-1]].Evaluation.item () == 'unsuccessful' and event_data.loc[[idx]].Team.item () != attack.team and event_data.loc[[idx]].Event1.item () != 'Play' and event_data.loc[[idx]].Event1.item () != 'BallClaiming' and event_data.loc[[idx+1]].Event1.item () != 'BallClaiming':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'ball_loss_unsuccessfulpass'
         defensive_success = 'successful'
 
     #Ballloss after tackling in first row after possession end:
     elif event_data.loc[[idx]].Event1.item () == 'TacklingGame' and event_data.loc[[idx]].WinnerTeam.item () != attack.team and event_data.loc[[idx]].PossessionChange.item () == True:
         x_position = event_data.loc[[idx]]['X-Position'].item ()
+        y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_loss_tackling1'
         defensive_success = 'successful'
         
@@ -411,6 +421,7 @@ for row, attack in possessions.iterrows ():
     #Ballloss after tackling in second row after possession end:
     elif event_data.loc[[idx+1]].Event1.item () == 'TacklingGame' and event_data.loc[[idx+1]].WinnerTeam.item () != attack.team and event_data.loc[[idx+1]].PossessionChange.item () == True:
         x_position = event_data.loc[[idx+1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_tackling2'
         defensive_success = 'successful'
         
@@ -420,6 +431,7 @@ for row, attack in possessions.iterrows ():
     #BallClaiming in second row after possession end & Tackling with possession change in first row after possession end:
     elif event_data.loc[[idx+1]].Event1.item () == 'BallClaiming' and event_data.loc[[idx+1]].Team.item () != attack.team and event_data.loc[[idx]].Event1.item () == 'TacklingGame' and event_data.loc[[idx]].PossessionChange.item () == True:
         x_position = event_data.loc[[idx+1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_claiming_after_tackling'
         defensive_success = 'successful'
         
@@ -428,6 +440,7 @@ for row, attack in possessions.iterrows ():
         
     else:
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
+        y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'other'
         defensive_success = 'other'
 
@@ -435,6 +448,7 @@ for row, attack in possessions.iterrows ():
     Result.append (result)
     Defensive_success.append (defensive_success)
     X_Position.append (x_position)
+    Y_Position.append (y_position)
     
     # Identification of playing direction
     if attack.start >= first_half.EventTime.item() and attack.start <= second_half.EventTime.item():
@@ -454,6 +468,8 @@ for row, attack in possessions.iterrows ():
 possessions['PossessionResult'] = Result
 possessions['DefensiveSuccess'] = Defensive_success
 possessions['X_Position_OfLastDefensiveAction'] = X_Position
+possessions['Y_Position_OfLastDefensiveAction'] = Y_Position
+
 possessions['TeamLeft'] = Team_left
 possessions['TeamRight'] = Team_right
 
@@ -713,7 +729,6 @@ for row, attack in possessions.iterrows ():
     start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
     end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
 
-    
 #result of attack is ball claiming:
     if attack.PossessionResult == 'ball_loss_claiming1' or attack.PossessionResult == 'ball_loss_claiming2':
         #First Player
@@ -917,13 +932,84 @@ for row, attack in possessions.iterrows ():
 #result of attack is ball going out of play
 #result of attack is stoppage of play
 #result of attack is other
-    elif attack.PossessionResult == 'ball_out_of_play' or attack.PossessionResult == 'stoppage_of_play' or attack.PossessionResult ==	'other':
-        if  (action_last.Event1.item() == 'Offside' or action_last.Event1.item() == 'GoalDisallowed') and actions.iloc[-2:-1].Player.isnull ().item() == True:
+    elif action_last.Event1.item() == 'Offside' and actions.iloc[-2:-1].Player.isnull ().item() == False:
+        #1. identify the pass that led to the offside
+        #2. find the first frame, where the ball is in the area (4-5m difference) of the freekick
+        action_last = actions.iloc[-2:-1]
+        #Find right frame of position data of this action (Snchronization of Event & Position data)
+        start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
+        end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
+         
+    
+        #First Player
+        search_field1 = position_data[position_data['PersonId'] == (action_last.Player.item ())]
+        search_field1 = search_field1[(search_field1['T_sec'] >= start_sync1) &
+                                      (search_field1['T_sec'] <= end_sync1)]
+        
+        #Ball
+        search_field_second1 = position_data[position_data['TeamId'] == 'BALL']
+        search_field_second1 = search_field_second1[(search_field_second1['T_sec'] >= start_sync1) &
+                                                    (search_field_second1['T_sec'] <= end_sync1)]
+        
+        search_field1 = search_field1.reset_index ()
+        search_field1 = search_field1.loc [0:399]
+
+        search_field_second1 = search_field_second1.reset_index ()
+        search_field_second1 = search_field_second1.loc [0:399]
+        
+        search_field1 = search_field1.join (search_field_second1, lsuffix = '_1', rsuffix = '_2')
+        
+        Difference1 = []
+        for index, frame in search_field1.iterrows ():
+            # Difference of player 1 and Ball is weighted 10 times over difference of player and ball to origin of playing event 
+            difference_player1_ball = (abs(frame['X_1'] - frame['X_2'])) + (abs(frame['Y_1'] - frame['Y_2']))
+            difference_player1ball_Origin = ((abs(frame['X_1'] - action_last['X-Position'].item())) + (abs(frame['Y_1'] - action_last['Y-Position'].item()))) + ((abs(frame['X_2'] - action_last['X-Position']).item()) + (abs(frame['Y_2'] - action_last['Y-Position'].item())))
+            
+            difference1 = (((difference_player1_ball *10) + difference_player1ball_Origin) /11) **2
+            Difference1.append (difference1)
+    
+        search_field1 ['difference'] = Difference1
+        identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
+
+        
+        #Search for Freekick after the foul --> needed for the location of the foul
+        if event_data.loc[[action_last['index'].item() + 1]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[action_last['index'].item() + 1]]
+        elif  event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[action_last['index'].item() + 2]]
+        elif event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 3]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[action_last['index'].item() + 3]]
+        else:
+            freekick =  event_data.loc[[action_last['index'].item() + 1]]
+        
+        start_sync = identified_frame_end
+        end_sync = identified_frame_end + 8
+        
+        #Ball
+        search_field_ball = position_data[position_data['TeamId'] == 'BALL']
+        search_field_ball = search_field_ball[(search_field_ball['T_sec'] >= start_sync) &
+                                              (search_field_ball['T_sec'] <= end_sync)]
+        
+        Difference1 = []
+        for index, frame in search_field_ball.iterrows ():
+            # Difference of Ball and origin of freekick is under 3 the first time 
+            difference1 = (abs(frame['X'] - freekick['X-Position'].item())) + (abs(frame['Y'] - freekick['Y-Position'].item()))
+            Difference1.append (difference1)
+    
+        search_field_ball['difference'] = Difference1
+        search_field_ball = search_field_ball[search_field_ball['difference'] <= 15].reset_index ()
+        
+        identified_frame_end = search_field_ball.iloc[0:1].T_sec.item()
+
+       
+        
+    elif (attack.PossessionResult == 'ball_out_of_play' or attack.PossessionResult == 'stoppage_of_play' or attack.PossessionResult ==	'other') and  action_last.Event1.item() != 'Offside':
+        if  action_last.Event1.item() == 'GoalDisallowed' and actions.iloc[-2:-1].Player.isnull ().item() == True:
             action_last = actions.iloc[-2:-1]
             #Find right frame of position data of this action (Snchronization of Event & Position data)
             start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
             end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
-
+            
         elif (action_last.Event1.item() == 'Offside' or action_last.Event1.item() == 'GoalDisallowed') and actions.iloc[-2:-1].Player.isnull ().item() == False:
             action_last = actions.iloc[-3:-2]
             #Find right frame of position data of this action (Snchronization of Event & Position data)
@@ -1027,14 +1113,14 @@ for row, attack in possessions.iterrows ():
         elif action_last.Player.isnull ().item() == True and action_last.Event1.item () == 'Foul': 
             
             #Search for Freekick after the foul --> needed for the location of the foul
-            if event_data.loc[[action_last['index'] + 1]].Event1.item() == 'FreeKick':
-                freekick =  event_data.loc[[action_last['index'] + 1]]
-            elif  event_data.loc[[action_last['index'] + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'] + 2]].Event1.item() == 'FreeKick':
-                freekick =  event_data.loc[[action_last['index'] + 2]]
-            elif event_data.loc[[action_last['index'] + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'] + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'] + 3]].Event1.item() == 'FreeKick':
-                freekick =  event_data.loc[[action_last['index'] + 3]]
+            if event_data.loc[[action_last['index'].item() + 1]].Event1.item() == 'FreeKick':
+                freekick =  event_data.loc[[action_last['index'].item() + 1]]
+            elif  event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() == 'FreeKick':
+                freekick =  event_data.loc[[action_last['index'].item() + 2]]
+            elif event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 3]].Event1.item() == 'FreeKick':
+                freekick =  event_data.loc[[action_last['index'].item() + 3]]
             else:
-                freekick =  event_data.loc[[action_last['index'] + 1]]
+                freekick =  event_data.loc[[action_last['index'].item() + 1]]
                 
             #First Player
             search_field1 = position_data[position_data['PersonId'] == (action_last.Fouler.item ())]
@@ -1074,8 +1160,7 @@ for row, attack in possessions.iterrows ():
             search_field1 ['difference'] = Difference1
             identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
             
-            
-        
+      
         #first action is other action than Tacklinggame, Pass or Foul
         elif action_last.Player.isnull ().item() == False:
             #First Player
@@ -1107,7 +1192,7 @@ for row, attack in possessions.iterrows ():
         
             search_field1 ['difference'] = Difference1
             identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
-    
+
     else:
         identified_frame_end = None
     
@@ -1120,18 +1205,39 @@ possessions = possessions[possessions['duration_sync'].isnull () == False]
 #%% Calculation of defensive pressure
 
 def pressure_quantification (attacker, defender, goal_x, goal_y):
+    #distance between the attacker and the defender
     distance = math.sqrt((defender['X'].item() - attacker['X'].item())**2 + (defender['Y'].item() - attacker['Y'].item())**2)
     
+    #angle between attacker and goal to define threat direction
     threat_direction = math.degrees (math.asin ((abs (attacker['Y'].item() - goal_y)) / (math.sqrt((attacker['X'].item() - goal_x)**2 + (attacker['Y'].item() - goal_y)**2))))
     
+    #defintion of angle between defnder and atatcker dependant on threat direction
     angle_defender = math.degrees (math.asin ((abs (defender['Y'].item() - goal_y)) / (math.sqrt((defender['X'].item() - goal_x)**2 + (defender['Y'].item() - goal_y)**2))))
     
     angle_between = abs (threat_direction - angle_defender)
     
+    #defnition of distance from attacker to the goal (necessary for the pressure form)
+    GoalDis = math.sqrt((attacker['X'].item() - goal_x)**2 + (attacker['Y'].item() - goal_y)**2)
+    
+    
     # Case 1 : Defender is in front of the Attacker:
     if goal_x == 0 and defender['X'].item() > attacker['X'].item() or goal_x > 0 and defender['X'].item() < attacker['X'].item():
+        #defnition of pressure area 
         Form = (1 - (math.cos (math.radians(angle_between))))/2
-        Length = 3 + ((9 - 3)*(( Form **3) + ( Form * 0.3)) / 1.3)
+        
+        #definition of length of the pressure area dependent n the attacker position
+        #gets smaller the closer the attacker gets to the goal
+        #inside the penalty area GoalDis is diveded by 2 to increase the drop of the size of the pressure area 
+        if (goal_x == 0 and attacker['X'].item() <= 16 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54) or (goal_x > 0 and attacker['X'].item() >= 89 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54):
+            #attacker is inside the penalty area
+            front = ((GoalDis /2)* 0.05) + 3.75
+            back = front * (1/3)
+        else:
+            #attacker is not in the penalty area
+            front = (GoalDis * 0.05) + 3.75
+            back = front * (1/3)
+            
+        Length = back + ((front - back)*(( Form **3) + ( Form * 0.3)) / 1.3)
         
         if distance > Length:
             pressure = 0
@@ -1143,8 +1249,22 @@ def pressure_quantification (attacker, defender, goal_x, goal_y):
     if goal_x == 0 and defender['X'].item() < attacker['X'].item() or goal_x > 0 and defender['X'].item() > attacker['X'].item ():
         angle_between = angle_between + 180
         
+        #defnition of pressure area 
         Form = (1 - (math.cos (math.radians(angle_between))))/2
-        Length = 3 + ((9 - 3)*(( Form **3) + ( Form * 0.3)) / 1.3)
+        
+        #definition of length of the pressure area dependent n the attacker position
+        #gets smaller the closer the attacker gets to the goal
+        #inside the penalty area GoalDis is diveded by 2 to increase the drop of the size of the pressure area 
+        if (goal_x == 0 and attacker['X'].item() <= 16 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54) or (goal_x > 0 and attacker['X'].item() >= 89 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54):
+            #attacker is inside the penalty area
+            front = ((GoalDis /2)* 0.05) + 3.75
+            back = front * (1/3)
+        else:
+            #attacker is not in the penalty area
+            front = (GoalDis * 0.05) + 3.75
+            back = front * (1/3)
+            
+        Length = back + ((front - back)*(( Form **3) + ( Form * 0.3)) / 1.3)
         
         if distance > Length:
             pressure = 0
@@ -1156,8 +1276,22 @@ def pressure_quantification (attacker, defender, goal_x, goal_y):
     if defender['X'].item() == attacker['X'].item():
         angle_between = 90
         
+        #defnition of pressure area 
         Form = (1 - (math.cos (math.radians(angle_between))))/2
-        Length = 3 + ((9 - 3)*(( Form **3) + ( Form * 0.3)) / 1.3)
+        
+        #definition of length of the pressure area dependent n the attacker position
+        #gets smaller the closer the attacker gets to the goal
+        #inside the penalty area GoalDis is diveded by 2 to increase the drop of the size of the pressure area 
+        if (goal_x == 0 and attacker['X'].item() <= 16 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54) or (goal_x > 0 and attacker['X'].item() >= 89 and attacker['Y'].item() >= 14 and attacker['Y'].item() <= 54):
+            #attacker is inside the penalty area
+            front = ((GoalDis /2)* 0.05) + 3.75
+            back = front * (1/3)
+        else:
+            #attacker is not in the penalty area
+            front = (GoalDis * 0.05) + 3.75
+            back = front * (1/3)
+            
+        Length = back + ((front - back)*(( Form **3) + ( Form * 0.3)) / 1.3)
         
         if distance > Length:
             pressure = 0
@@ -2752,6 +2886,364 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure8_8.append (ongrouppressure8_8)
     OnGroupPressure8_9.append (ongrouppressure8_9)
     OnGroupPressure8_10.append (ongrouppressure8_10)
+    
+#%%
+#Measurement for timestamp: 9
+
+OnBallPressure9 = []
+OnGroupPressure9_1  = []
+OnGroupPressure9_2  = []
+OnGroupPressure9_3  = []
+OnGroupPressure9_4  = []
+OnGroupPressure9_5  = []
+OnGroupPressure9_6  = []
+OnGroupPressure9_7  = []
+OnGroupPressure9_8  = []
+OnGroupPressure9_9  = []
+OnGroupPressure9_10  = []
+
+for row, attack in possessions.iterrows ():
+    if attack.duration_sync >= 9:
+        #calculation of timestamps for calculation of defensive pressure
+        second_9 = attack.end_sync - 9
+        
+        identified_frames9 = position_data[position_data['T_sec'] == second_9]
+        
+        #Case 1: Team1 is in ball possession and plays from left to right
+        if attack.team == team1 and attack.TeamLeft == team1:
+            possible_attackers9 = identified_frames9[identified_frames9['TeamId'] == team1]
+            possible_defenders9 = identified_frames9[identified_frames9['TeamId'] == team2]
+            ball9 = identified_frames9[identified_frames9['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 105
+            goal_y_to_play = 34
+        #Case 2: Team1 is in ball possession and plays from right to left 
+        elif attack.team == team1 and attack.TeamRight == team1:
+            possible_attackers9 = identified_frames9[identified_frames9['TeamId'] == team1]
+            possible_defenders9 = identified_frames9[identified_frames9['TeamId'] == team2]
+            ball9 = identified_frames9[identified_frames9['TeamId'] == 'BALL'] 
+            
+            goal_x_to_play = 0
+            goal_y_to_play = 34
+        #Case 3: Team2 is in ball possession and plays from left to right 
+        elif attack.team == team2 and attack.TeamLeft == team2:
+            possible_attackers9 = identified_frames9[identified_frames9['TeamId'] == team2]
+            possible_defenders9 = identified_frames9[identified_frames9['TeamId'] == team1]
+            ball9 = identified_frames9[identified_frames9['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 105
+            goal_y_to_play = 34
+        #Case 4: Team2 is in ball possession and plays from right to left 
+        elif attack.team == team2 and attack.TeamRight == team2:
+            possible_attackers9 = identified_frames9[identified_frames9['TeamId'] == team2]
+            possible_defenders9 = identified_frames9[identified_frames9['TeamId'] == team1]
+            ball9 = identified_frames9[identified_frames9['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 0
+            goal_y_to_play = 34
+            
+        if len(possible_attackers9) == 11 and len(possible_defenders9) == 11: 
+       
+            #Identification of all attackers sorted after distance to ball
+            Dis = []
+            for index2, attacker in possible_attackers9.iterrows ():
+                attack = pd.DataFrame (attacker)
+                attack = attack.transpose ()
+                dis = math.sqrt((attack['X'].item() - ball9['X'].item())**2 + (attack['Y'].item() - ball9['Y'].item())**2)
+                Dis.append (dis)
+        
+            possible_attackers9['DistanceToBall'] = Dis
+        
+            group_attackers9 = possible_attackers9.sort_values (by=['DistanceToBall']).reset_index()
+        
+            group_attacker9_0 = group_attackers9.loc[[0]]
+            group_attacker9_1 = group_attackers9.loc[[1]]
+            group_attacker9_2 = group_attackers9.loc[[2]]
+            group_attacker9_3 = group_attackers9.loc[[3]]
+            group_attacker9_4 = group_attackers9.loc[[4]]
+            group_attacker9_5 = group_attackers9.loc[[5]]
+            group_attacker9_6 = group_attackers9.loc[[6]]
+            group_attacker9_7 = group_attackers9.loc[[7]]
+            group_attacker9_8 = group_attackers9.loc[[8]]
+            group_attacker9_9 = group_attackers9.loc[[9]]
+            group_attacker9_10 = group_attackers9.loc[[10]]
+        
+            #Calculation of pressure 
+            Press_onball9 = []
+            Press_ongroup9_1 = []
+            Press_ongroup9_2 = []
+            Press_ongroup9_3 = []
+            Press_ongroup9_4 = []
+            Press_ongroup9_5 = []
+            Press_ongroup9_6 = []
+            Press_ongroup9_7 = []
+            Press_ongroup9_8 = []
+            Press_ongroup9_9 = []
+            Press_ongroup9_10 = []
+    
+            for index2, defender in possible_defenders9.iterrows ():
+                defend = pd.DataFrame (defender)
+                defend = defend.transpose ()
+        
+                press_onball = pressure_quantification (group_attacker9_0, defend, goal_x_to_play, goal_y_to_play)
+                Press_onball9.append (press_onball)
+                
+                press_ongroup1 = pressure_quantification (group_attacker9_1, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_1.append (press_ongroup1)
+                
+                press_ongroup2 = pressure_quantification (group_attacker9_2, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_2.append (press_ongroup2)
+                
+                press_ongroup3 = pressure_quantification (group_attacker9_3, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_3.append (press_ongroup3)
+                
+                press_ongroup4 = pressure_quantification (group_attacker9_4, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_4.append (press_ongroup4)
+                
+                press_ongroup5 = pressure_quantification (group_attacker9_5, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_5.append (press_ongroup5)
+            
+                press_ongroup6 = pressure_quantification (group_attacker9_6, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_6.append (press_ongroup6)
+            
+                press_ongroup7 = pressure_quantification (group_attacker9_7, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_7.append (press_ongroup7)
+                
+                press_ongroup8 = pressure_quantification (group_attacker9_8, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_8.append (press_ongroup8)
+                
+                press_ongroup9 = pressure_quantification (group_attacker9_9, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_9.append (press_ongroup9)
+                
+                press_ongroup10 = pressure_quantification (group_attacker9_10, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup9_10.append (press_ongroup10)
+                
+            onballpressure9 = max (Press_onball9)
+            ongrouppressure9_1 = max (Press_ongroup9_1)
+            ongrouppressure9_2 = max (Press_ongroup9_2)
+            ongrouppressure9_3 = max (Press_ongroup9_3)
+            ongrouppressure9_4 = max (Press_ongroup9_4)
+            ongrouppressure9_5 = max (Press_ongroup9_5)
+            ongrouppressure9_6 = max (Press_ongroup9_6)
+            ongrouppressure9_7 = max (Press_ongroup9_7)
+            ongrouppressure9_8 = max (Press_ongroup9_8)
+            ongrouppressure9_9 = max (Press_ongroup9_9)
+            ongrouppressure9_10 = max (Press_ongroup9_10)
+        else:
+            onballpressure9 = None
+            ongrouppressure9_1 = None
+            ongrouppressure9_2 = None
+            ongrouppressure9_3 = None
+            ongrouppressure9_4 = None
+            ongrouppressure9_5 = None
+            ongrouppressure9_6 = None
+            ongrouppressure9_7 = None
+            ongrouppressure9_8 = None
+            ongrouppressure9_9 = None
+            ongrouppressure9_10 = None
+    else: 
+        onballpressure9 = None
+        ongrouppressure9_1 = None
+        ongrouppressure9_2 = None
+        ongrouppressure9_3 = None
+        ongrouppressure9_4 = None
+        ongrouppressure9_5 = None
+        ongrouppressure9_6 = None
+        ongrouppressure9_7 = None
+        ongrouppressure9_8 = None
+        ongrouppressure9_9 = None
+        ongrouppressure9_10 = None
+
+    OnBallPressure9.append (onballpressure9)
+    OnGroupPressure9_1.append (ongrouppressure9_1)
+    OnGroupPressure9_2.append (ongrouppressure9_2)
+    OnGroupPressure9_3.append (ongrouppressure9_3)
+    OnGroupPressure9_4.append (ongrouppressure9_4)
+    OnGroupPressure9_5.append (ongrouppressure9_5)
+    OnGroupPressure9_6.append (ongrouppressure9_6)
+    OnGroupPressure9_7.append (ongrouppressure9_7)
+    OnGroupPressure9_8.append (ongrouppressure9_8)
+    OnGroupPressure9_9.append (ongrouppressure9_9)
+    OnGroupPressure9_10.append (ongrouppressure9_10)
+    
+#%%
+#Measurement for timestamp: 10
+
+OnBallPressure10 = []
+OnGroupPressure10_1  = []
+OnGroupPressure10_2  = []
+OnGroupPressure10_3  = []
+OnGroupPressure10_4  = []
+OnGroupPressure10_5  = []
+OnGroupPressure10_6  = []
+OnGroupPressure10_7  = []
+OnGroupPressure10_8  = []
+OnGroupPressure10_9  = []
+OnGroupPressure10_10  = []
+
+for row, attack in possessions.iterrows ():
+    if attack.duration_sync >= 10:
+        #calculation of timestamps for calculation of defensive pressure
+        second_10 = attack.end_sync - 10
+        
+        identified_frames10 = position_data[position_data['T_sec'] == second_10]
+        
+        #Case 1: Team1 is in ball possession and plays from left to right
+        if attack.team == team1 and attack.TeamLeft == team1:
+            possible_attackers10 = identified_frames10[identified_frames10['TeamId'] == team1]
+            possible_defenders10 = identified_frames10[identified_frames10['TeamId'] == team2]
+            ball10 = identified_frames10[identified_frames10['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 105
+            goal_y_to_play = 34
+        #Case 2: Team1 is in ball possession and plays from right to left 
+        elif attack.team == team1 and attack.TeamRight == team1:
+            possible_attackers10 = identified_frames10[identified_frames10['TeamId'] == team1]
+            possible_defenders10 = identified_frames10[identified_frames10['TeamId'] == team2]
+            ball10 = identified_frames10[identified_frames10['TeamId'] == 'BALL'] 
+            
+            goal_x_to_play = 0
+            goal_y_to_play = 34
+        #Case 3: Team2 is in ball possession and plays from left to right 
+        elif attack.team == team2 and attack.TeamLeft == team2:
+            possible_attackers10 = identified_frames10[identified_frames10['TeamId'] == team2]
+            possible_defenders10 = identified_frames10[identified_frames10['TeamId'] == team1]
+            ball10 = identified_frames10[identified_frames10['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 105
+            goal_y_to_play = 34
+        #Case 4: Team2 is in ball possession and plays from right to left 
+        elif attack.team == team2 and attack.TeamRight == team2:
+            possible_attackers10 = identified_frames10[identified_frames10['TeamId'] == team2]
+            possible_defenders10 = identified_frames10[identified_frames10['TeamId'] == team1]
+            ball10 = identified_frames10[identified_frames10['TeamId'] == 'BALL']
+            
+            goal_x_to_play = 0
+            goal_y_to_play = 34
+            
+        if len(possible_attackers10) == 11 and len(possible_defenders10) == 11: 
+       
+            #Identification of all attackers sorted after distance to ball
+            Dis = []
+            for index2, attacker in possible_attackers10.iterrows ():
+                attack = pd.DataFrame (attacker)
+                attack = attack.transpose ()
+                dis = math.sqrt((attack['X'].item() - ball10['X'].item())**2 + (attack['Y'].item() - ball10['Y'].item())**2)
+                Dis.append (dis)
+        
+            possible_attackers10['DistanceToBall'] = Dis
+        
+            group_attackers10 = possible_attackers10.sort_values (by=['DistanceToBall']).reset_index()
+    
+            group_attacker10_0 = group_attackers10.loc[[0]]
+            group_attacker10_1 = group_attackers10.loc[[1]]
+            group_attacker10_2 = group_attackers10.loc[[2]]
+            group_attacker10_3 = group_attackers10.loc[[3]]
+            group_attacker10_4 = group_attackers10.loc[[4]]
+            group_attacker10_5 = group_attackers10.loc[[5]]
+            group_attacker10_6 = group_attackers10.loc[[6]]
+            group_attacker10_7 = group_attackers10.loc[[7]]
+            group_attacker10_8 = group_attackers10.loc[[8]]
+            group_attacker10_9 = group_attackers10.loc[[9]]
+            group_attacker10_10 = group_attackers10.loc[[10]]
+        
+            #Calculation of pressure 
+            Press_onball10 = []
+            Press_ongroup10_1 = []
+            Press_ongroup10_2 = []
+            Press_ongroup10_3 = []
+            Press_ongroup10_4 = []
+            Press_ongroup10_5 = []
+            Press_ongroup10_6 = []
+            Press_ongroup10_7 = []
+            Press_ongroup10_8 = []
+            Press_ongroup10_9 = []
+            Press_ongroup10_10 = []
+    
+            for index2, defender in possible_defenders10.iterrows ():
+                defend = pd.DataFrame (defender)
+                defend = defend.transpose ()
+        
+                press_onball = pressure_quantification (group_attacker10_0, defend, goal_x_to_play, goal_y_to_play)
+                Press_onball10.append (press_onball)
+                
+                press_ongroup1 = pressure_quantification (group_attacker10_1, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_1.append (press_ongroup1)
+                
+                press_ongroup2 = pressure_quantification (group_attacker10_2, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_2.append (press_ongroup2)
+                
+                press_ongroup3 = pressure_quantification (group_attacker10_3, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_3.append (press_ongroup3)
+                
+                press_ongroup4 = pressure_quantification (group_attacker10_4, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_4.append (press_ongroup4)
+                
+                press_ongroup5 = pressure_quantification (group_attacker10_5, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_5.append (press_ongroup5)
+            
+                press_ongroup6 = pressure_quantification (group_attacker10_6, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_6.append (press_ongroup6)
+            
+                press_ongroup7 = pressure_quantification (group_attacker10_7, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_7.append (press_ongroup7)
+                
+                press_ongroup8 = pressure_quantification (group_attacker10_8, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_8.append (press_ongroup8)
+                
+                press_ongroup9 = pressure_quantification (group_attacker10_9, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_9.append (press_ongroup9)
+                
+                press_ongroup10 = pressure_quantification (group_attacker10_10, defend, goal_x_to_play, goal_y_to_play)
+                Press_ongroup10_10.append (press_ongroup10)
+                
+            onballpressure10 = max (Press_onball10)
+            ongrouppressure10_1 = max (Press_ongroup10_1)
+            ongrouppressure10_2 = max (Press_ongroup10_2)
+            ongrouppressure10_3 = max (Press_ongroup10_3)
+            ongrouppressure10_4 = max (Press_ongroup10_4)
+            ongrouppressure10_5 = max (Press_ongroup10_5)
+            ongrouppressure10_6 = max (Press_ongroup10_6)
+            ongrouppressure10_7 = max (Press_ongroup10_7)
+            ongrouppressure10_8 = max (Press_ongroup10_8)
+            ongrouppressure10_9 = max (Press_ongroup10_9)
+            ongrouppressure10_10 = max (Press_ongroup10_10)
+        else:
+            onballpressure10 = None
+            ongrouppressure10_1 = None
+            ongrouppressure10_2 = None
+            ongrouppressure10_3 = None
+            ongrouppressure10_4 = None
+            ongrouppressure10_5 = None
+            ongrouppressure10_6 = None
+            ongrouppressure10_7 = None
+            ongrouppressure10_8 = None
+            ongrouppressure10_9 = None
+            ongrouppressure10_10 = None
+    else: 
+        onballpressure10 = None
+        ongrouppressure10_1 = None
+        ongrouppressure10_2 = None
+        ongrouppressure10_3 = None
+        ongrouppressure10_4 = None
+        ongrouppressure10_5 = None
+        ongrouppressure10_6 = None
+        ongrouppressure10_7 = None
+        ongrouppressure10_8 = None
+        ongrouppressure10_9 = None
+        ongrouppressure10_10 = None
+
+    OnBallPressure10.append (onballpressure10)
+    OnGroupPressure10_1.append (ongrouppressure10_1)
+    OnGroupPressure10_2.append (ongrouppressure10_2)
+    OnGroupPressure10_3.append (ongrouppressure10_3)
+    OnGroupPressure10_4.append (ongrouppressure10_4)
+    OnGroupPressure10_5.append (ongrouppressure10_5)
+    OnGroupPressure10_6.append (ongrouppressure10_6)
+    OnGroupPressure10_7.append (ongrouppressure10_7)
+    OnGroupPressure10_8.append (ongrouppressure10_8)
+    OnGroupPressure10_9.append (ongrouppressure10_9)
+    OnGroupPressure10_10.append (ongrouppressure10_10)
 #%%
 possessions['OnBallPressure0'] = OnBallPressure0
 possessions['OnGroupPressure0_1'] = OnGroupPressure0_1
@@ -2861,6 +3353,30 @@ possessions['OnGroupPressure8_8'] = OnGroupPressure8_8
 possessions['OnGroupPressure8_9'] = OnGroupPressure8_9
 possessions['OnGroupPressure8_10'] = OnGroupPressure8_10
 
+possessions['OnBallPressure9'] = OnBallPressure9
+possessions['OnGroupPressure9_1'] = OnGroupPressure9_1
+possessions['OnGroupPressure9_2'] = OnGroupPressure9_2
+possessions['OnGroupPressure9_3'] = OnGroupPressure9_3
+possessions['OnGroupPressure9_4'] = OnGroupPressure9_4
+possessions['OnGroupPressure9_5'] = OnGroupPressure9_5
+possessions['OnGroupPressure9_6'] = OnGroupPressure9_6
+possessions['OnGroupPressure9_7'] = OnGroupPressure9_7
+possessions['OnGroupPressure9_8'] = OnGroupPressure9_8
+possessions['OnGroupPressure9_9'] = OnGroupPressure9_9
+possessions['OnGroupPressure9_10'] = OnGroupPressure9_10
+
+possessions['OnBallPressure10'] = OnBallPressure10
+possessions['OnGroupPressure10_1'] = OnGroupPressure10_1
+possessions['OnGroupPressure10_2'] = OnGroupPressure10_2
+possessions['OnGroupPressure10_3'] = OnGroupPressure10_3
+possessions['OnGroupPressure10_4'] = OnGroupPressure10_4
+possessions['OnGroupPressure10_5'] = OnGroupPressure10_5
+possessions['OnGroupPressure10_6'] = OnGroupPressure10_6
+possessions['OnGroupPressure10_7'] = OnGroupPressure10_7
+possessions['OnGroupPressure10_8'] = OnGroupPressure10_8
+possessions['OnGroupPressure10_9'] = OnGroupPressure10_9
+possessions['OnGroupPressure10_10'] = OnGroupPressure10_10
+
 #%% Calculation of end of an attack in last/middle/first third?
 
 Third = []
@@ -2888,22 +3404,4 @@ possessions['Third_OfLastDefensiveAction'] = Third
 
 #%% Safe the result Dataframe 'possessions'
 
-possessions.to_csv (r'result_possessions_timepoints_Game11.csv')
-
-#%%
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure0.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure0.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure1.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure1.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure2.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure2.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure3.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure3.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure4.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure4.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure5.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure5.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure6.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure6.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'successful'].OnBallPressure7.mean())
-print (possessions[possessions['DefensiveSuccess'] == 'unsuccessful'].OnBallPressure7.mean())
+possessions.to_csv (r'result_possessions_timepoints_Game1.csv')
