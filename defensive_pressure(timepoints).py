@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 #%%Load event and position data
 
-event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game1.csv')
-position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game1.csv')
+event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game5.csv')
+position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game5.csv')
 
 #%% Alignemnt of position and event data coordinates
 # event data coordinates with (0|0) beeing the left bottom corner of the pitch / pitch (105m * 68m)
@@ -928,14 +928,22 @@ for row, attack in possessions.iterrows ():
         search_field1 ['difference'] = Difference1
         identified_frame_end = (search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item())
     
-    
+
 #result of attack is ball going out of play
 #result of attack is stoppage of play
 #result of attack is other
-    elif action_last.Event1.item() == 'Offside' and actions.iloc[-2:-1].Player.isnull ().item() == False:
-        #1. identify the pass that led to the offside
+    elif action_last.Event1.item() == 'Offside':
+        #1. identify the pass that led to the 
+        if actions.iloc[-2:-1].Player.isnull ().item() == False and actions.iloc[-2:-1]['X-Position'].isnull ().item() == False:
+            action_last = actions.iloc[-2:-1]
+        elif  (actions.iloc[-2:-1].Player.isnull ().item() == True or actions.iloc[-2:-1]['X-Position'].isnull ().item() == True) and actions.iloc[-3:-2].Player.isnull ().item() == False and actions.iloc[-3:-2]['X-Position'].isnull ().item() == False:
+            action_last = actions.iloc[-3:-2]
+        elif  (actions.iloc[-2:-1].Player.isnull ().item() == True or actions.iloc[-2:-1]['X-Position'].isnull ().item() == True) and  (actions.iloc[-3:-2].Player.isnull ().item() == True or actions.iloc[-3:-2]['X-Position'].isnull ().item() == True) and  actions.iloc[-4:-3].Player.isnull ().item() == False and actions.iloc[-4:-3]['X-Position'].isnull ().item() == False:
+            action_last = actions.iloc[-4:-3]
+        else:
+            identified_frame_end = None
+            
         #2. find the first frame, where the ball is in the area (4-5m difference) of the freekick
-        action_last = actions.iloc[-2:-1]
         #Find right frame of position data of this action (Snchronization of Event & Position data)
         start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
         end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
@@ -972,16 +980,16 @@ for row, attack in possessions.iterrows ():
         identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
 
         
-        #Search for Freekick after the foul --> needed for the location of the foul
-        if event_data.loc[[action_last['index'].item() + 1]].Event1.item() == 'FreeKick':
-            freekick =  event_data.loc[[action_last['index'].item() + 1]]
-        elif  event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() == 'FreeKick':
-            freekick =  event_data.loc[[action_last['index'].item() + 2]]
-        elif event_data.loc[[action_last['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[action_last['index'].item() + 3]].Event1.item() == 'FreeKick':
-            freekick =  event_data.loc[[action_last['index'].item() + 3]]
+        #Search for Freekick after the offside --> needed for the location of the offside
+        if event_data.loc[[actions.iloc[-1]['index'].item()]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 1]]
+        elif  event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 2]]
+        elif event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 3]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 3]]
         else:
-            freekick =  event_data.loc[[action_last['index'].item() + 1]]
-        
+            freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 1]]
+
         start_sync = identified_frame_end
         end_sync = identified_frame_end + 8
         
@@ -989,7 +997,7 @@ for row, attack in possessions.iterrows ():
         search_field_ball = position_data[position_data['TeamId'] == 'BALL']
         search_field_ball = search_field_ball[(search_field_ball['T_sec'] >= start_sync) &
                                               (search_field_ball['T_sec'] <= end_sync)]
-        
+
         Difference1 = []
         for index, frame in search_field_ball.iterrows ():
             # Difference of Ball and origin of freekick is under 3 the first time 
@@ -997,10 +1005,12 @@ for row, attack in possessions.iterrows ():
             Difference1.append (difference1)
     
         search_field_ball['difference'] = Difference1
-        search_field_ball = search_field_ball[search_field_ball['difference'] <= 15].reset_index ()
         
-        identified_frame_end = search_field_ball.iloc[0:1].T_sec.item()
-
+        if search_field_ball['difference'].min () <= 15 :
+            search_field_ball = search_field_ball[search_field_ball['difference'] <= 15].reset_index ()
+            identified_frame_end = search_field_ball.iloc[0:1].T_sec.item()
+        else:
+            identified_frame_end = None
        
         
     elif (attack.PossessionResult == 'ball_out_of_play' or attack.PossessionResult == 'stoppage_of_play' or attack.PossessionResult ==	'other') and  action_last.Event1.item() != 'Offside':
@@ -3404,4 +3414,4 @@ possessions['Third_OfLastDefensiveAction'] = Third
 
 #%% Safe the result Dataframe 'possessions'
 
-possessions.to_csv (r'result_possessions_timepoints_Game1.csv')
+possessions.to_csv (r'result_possessions_timepoints_Game5.csv')
