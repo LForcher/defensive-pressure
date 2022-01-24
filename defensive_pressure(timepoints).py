@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 #%%Load event and position data
 
-event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game5.csv')
-position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game5.csv')
+event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game18.csv')
+position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game18.csv')
 
 #%% Alignemnt of position and event data coordinates
 # event data coordinates with (0|0) beeing the left bottom corner of the pitch / pitch (105m * 68m)
@@ -319,6 +319,7 @@ possessions = possessions.rename (columns = {'index': 'Row'})
 
 #%%
 Result = []
+Result2 = []
 Defensive_success = []
 X_Position = []
 Y_Position =[]
@@ -335,7 +336,8 @@ for row, attack in possessions.iterrows ():
     actions = event_data[(event_data['EventTime'] >= attack.start) &
                          (event_data['EventTime'] <= attack.end)]
     idx = attack.actions + attack.Row
-
+    
+    attacking_team = attack.team
 #unsuccessful defensive play:
     # 1. Stoppage of play
     # 2. Ball going out of play
@@ -343,37 +345,54 @@ for row, attack in possessions.iterrows ():
     if  event_data.loc[[idx]].Event1.item () == 'FinalWhistle' and event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
         y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
-        result = 'end_of_half'
+        result = 'stoppage_of_play'
         defensive_success = 'unsuccessful'
-    
+        result2 = 'end_of_half'
+        
     #Stoppage of Play:
-    elif event_data.loc[[idx]].Event1.item () == 'FreeKick' or  event_data.loc[[idx]].Event1.item () == 'Foul' or event_data.loc[[idx]].Event1.item () == 'Offside':
+    elif event_data.loc[[idx]].Event1.item () == 'FreeKick' or event_data.loc[[idx-1]].Event1.item () == 'Foul' or event_data.loc[[idx]].Event1.item () == 'Foul' or event_data.loc[[idx-1]].Event1.item () == 'Offside'or event_data.loc[[idx]].Event1.item () == 'Offside':
         x_position = event_data.loc[[idx]]['X-Position'].item ()
         y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'stoppage_of_play'
         defensive_success = 'unsuccessful'
         
+        if event_data.loc[[idx]].Event1.item () == 'Foul' and event_data.loc[[idx]].TeamFouled.item () == attacking_team:
+            result2 = 'foul_defending_team'
+        elif event_data.loc[[idx]].Event1.item () == 'Foul' and event_data.loc[[idx]].TeamFouled.item () != attacking_team:
+            result2 = 'foul_attacking_team'
+        elif event_data.loc[[idx]].Event1.item () == 'Offside' or event_data.loc[[idx-1]].Event1.item () == 'Offside':
+            result2 = 'Offside'
+        else:
+            result2 = 'other'
+            
     #Ball going out of play (without shot as last action)
     elif  event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal' and (event_data.loc[[idx]].Event1.item () == 'ThrowIn' or event_data.loc[[idx]].Event1.item () == 'GoalKick' or event_data.loc[[idx]].Event1.item () == 'CornerKick'):
         x_position = event_data.loc[[idx]]['X-Position'].item ()
         y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_out_of_play'
         defensive_success = 'unsuccessful'
-    
+        
+        if event_data.loc[[idx]].Team.item () == attacking_team:
+            result2 = 'ball_out_of_play_by_defending_team'
+        elif event_data.loc[[idx]].Team.item () != attacking_team:
+            result2 = 'ball_out_of_play_by_attacking_team'
+        else:
+            result2 = 'other'
+        
     #last action of attack is shot at goal:
     elif event_data.loc[[idx-1]].Event1.item () == 'ShotAtGoal':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
         y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'ShotAtGoal1'
         defensive_success = 'unsuccessful'
-    
+        result2 = 'ShotAtGoal1'
     #penultimate action of attack is shot at goal:
     elif event_data.loc[[idx-2]].Event1.item () == 'ShotAtGoal' and event_data.loc[[idx-1]].Event1.item () != 'ShotAtGoal':
         x_position = event_data.loc[[idx-2]]['X-Position'].item ()
         y_position = event_data.loc[[idx-2]]['Y-Position'].item ()
         result = 'ShotAtGoal2'
         defensive_success = 'unsuccessful'
-        
+        result2 = 'ShotAtGoal2'
 
 #successful defensive play:
     #1. BallClaiming
@@ -386,7 +405,7 @@ for row, attack in possessions.iterrows ():
         y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_loss_claiming1'
         defensive_success = 'successful'
-        
+        result2 = 'ball_loss_claiming1'
         #new definition of possession end
         possessions.loc[row, 'end'] = event_data.loc[[idx]]['EventTime'].item ()
         
@@ -396,24 +415,25 @@ for row, attack in possessions.iterrows ():
         y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_claiming2'
         defensive_success = 'successful'
-
+        result2 = 'ball_loss_claiming2'
         #new definition of possession end
         possessions.loc[row, 'end'] = event_data.loc[[idx+1]]['EventTime'].item ()
         
     #Ballgain after unsuccessful pass: last action of attack is unsuccessful pass & next action is on ball action of other team & no event called BallClaiming:
-    elif event_data.loc[[idx-1]].Event1.item () == 'Play' and event_data.loc[[idx-1]].Evaluation.item () == 'unsuccessful' and event_data.loc[[idx]].Team.item () != attack.team and event_data.loc[[idx]].Event1.item () != 'Play' and event_data.loc[[idx]].Event1.item () != 'BallClaiming' and event_data.loc[[idx+1]].Event1.item () != 'BallClaiming':
+    elif event_data.loc[[idx-1]].Event1.item () == 'Play' and event_data.loc[[idx-1]].Evaluation.item () == 'unsuccessful' and event_data.loc[[idx]].Team.item () != attacking_team and event_data.loc[[idx]].Event1.item () != 'BallClaiming'  and event_data.loc[[idx+1]].Event1.item () != 'BallClaiming':
         x_position = event_data.loc[[idx-1]]['X-Position'].item ()
         y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'ball_loss_unsuccessfulpass'
         defensive_success = 'successful'
-
+        result2 = 'ball_loss_unsuccessfulpass'
+        
     #Ballloss after tackling in first row after possession end:
     elif event_data.loc[[idx]].Event1.item () == 'TacklingGame' and event_data.loc[[idx]].WinnerTeam.item () != attack.team and event_data.loc[[idx]].PossessionChange.item () == True:
         x_position = event_data.loc[[idx]]['X-Position'].item ()
         y_position = event_data.loc[[idx]]['Y-Position'].item ()
         result = 'ball_loss_tackling1'
         defensive_success = 'successful'
-        
+        result2 = 'ball_loss_tackling1'
         #new definition of possession end
         possessions.loc[row, 'end'] = event_data.loc[[idx]]['EventTime'].item ()
         
@@ -424,7 +444,7 @@ for row, attack in possessions.iterrows ():
         y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_tackling2'
         defensive_success = 'successful'
-        
+        result2 = 'ball_loss_tackling2'
         #new definition of possession end
         possessions.loc[row, 'end'] = event_data.loc[[idx+1]]['EventTime'].item ()
         
@@ -434,7 +454,7 @@ for row, attack in possessions.iterrows ():
         y_position = event_data.loc[[idx+1]]['Y-Position'].item ()
         result = 'ball_loss_claiming_after_tackling'
         defensive_success = 'successful'
-        
+        result2 = 'ball_loss_claiming_after_tackling'        
         #new definition of possession end
         possessions.loc[row, 'end'] = event_data.loc[[idx+1]]['EventTime'].item ()
         
@@ -443,9 +463,10 @@ for row, attack in possessions.iterrows ():
         y_position = event_data.loc[[idx-1]]['Y-Position'].item ()
         result = 'other'
         defensive_success = 'other'
-
+        result2 = 'other'
     
     Result.append (result)
+    Result2.append (result2)
     Defensive_success.append (defensive_success)
     X_Position.append (x_position)
     Y_Position.append (y_position)
@@ -463,9 +484,10 @@ for row, attack in possessions.iterrows ():
     
     Team_left.append (team_left)
     Team_right.append (team_right)
-
+    
 
 possessions['PossessionResult'] = Result
+possessions['PossessionResult2'] = Result2
 possessions['DefensiveSuccess'] = Defensive_success
 possessions['X_Position_OfLastDefensiveAction'] = X_Position
 possessions['Y_Position_OfLastDefensiveAction'] = Y_Position
@@ -520,7 +542,7 @@ for row, attack in possessions.iterrows ():
     #identification of action
     action_first = actions.loc[[0]]
     
-    critical_events = ['OtherPlayerAction', 'Nutmeg', 'Substitution', 'FinalWhistle', 'SpectacularPlay']
+    critical_events = ['OtherPlayerAction', 'Nutmeg', 'Substitution', 'FinalWhistle', 'SpectacularPlay', 'Caution']
     if (actions.loc[[0]].Event1.item () in critical_events) == True and (actions.loc[[1]].Event1.item () in critical_events) == False:
         action_first = actions.loc[[1]]
     elif (actions.loc[[0]].Event1.item () in critical_events) == True and (actions.loc[[1]].Event1.item () in critical_events) == True and (actions.loc[[2]].Event1.item () in critical_events) == False:
@@ -3414,4 +3436,4 @@ possessions['Third_OfLastDefensiveAction'] = Third
 
 #%% Safe the result Dataframe 'possessions'
 
-possessions.to_csv (r'result_possessions_timepoints_Game5.csv')
+possessions.to_csv (r'result_possessions_timepoints_Game18.csv')
