@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 #%%Load event and position data
 
-event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/EventData_1.Buli_Season19-20_Game18.csv')
-position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten/PositionData_1.Buli_Season19-20_Game18.csv')
+event_data =  pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten (Rückrunde_20_21)/EventData_1.Buli_Season19-20_Game1.csv')
+position_data = pd.read_csv ('C:/Users/sysadmin/Desktop/Dissertation/DFL Daten/DFL Daten (Rückrunde_20_21)/PositionData_1.Buli_Season19-20_Game1.csv')
 
 #%% Alignemnt of position and event data coordinates
 # event data coordinates with (0|0) beeing the left bottom corner of the pitch / pitch (105m * 68m)
@@ -529,7 +529,7 @@ possessions['TeamRight'] = Team_right
 #7. if possession end is 'shot on goal':
     #start: first action of events
     #end: shot on goal
-    
+
 #%% Synchronisation of start of an attack (Alignment of event data to position data)
 
 possessions['start_sync'] = None
@@ -542,7 +542,7 @@ for row, attack in possessions.iterrows ():
     #identification of action
     action_first = actions.loc[[0]]
     
-    critical_events = ['OtherPlayerAction', 'Nutmeg', 'Substitution', 'FinalWhistle', 'SpectacularPlay', 'Caution']
+    critical_events = ['OtherPlayerAction', 'Nutmeg', 'Substitution', 'FinalWhistle', 'SpectacularPlay', 'Caution', 'Foul', 'Offside', 'PreventedOwnGoal']
     if (actions.loc[[0]].Event1.item () in critical_events) == True and (actions.loc[[1]].Event1.item () in critical_events) == False:
         action_first = actions.loc[[1]]
     elif (actions.loc[[0]].Event1.item () in critical_events) == True and (actions.loc[[1]].Event1.item () in critical_events) == True and (actions.loc[[2]].Event1.item () in critical_events) == False:
@@ -559,7 +559,7 @@ for row, attack in possessions.iterrows ():
 #2. Passes
 #3. Fouls
 #4. other events 
-        
+
     #1. first action is Tackling Game
     if action_first.Player.isnull ().item() == True and action_first.Event1.item () == 'TacklingGame':
         #First Player
@@ -744,9 +744,16 @@ for row, attack in possessions.iterrows ():
     #identification of action
     action_last = actions.iloc[-1:]
     
-    if action_last.Event1.item() == 'Nutmeg' or action_last.Event1.item() == 'FinalWhistle' or action_last.Event1.item() == 'SpectacularPlay':
+    critical_events = ['OtherPlayerAction', 'Nutmeg', 'Substitution', 'FinalWhistle', 'SpectacularPlay', 'Caution']
+    if (actions.iloc[-1:].Event1.item () in critical_events) == True and (actions.iloc[-2:-1].Event1.item () in critical_events) == False:
         action_last = actions.iloc[-2:-1]
-
+    elif (actions.iloc[-1:].Event1.item () in critical_events) == True and (actions.iloc[-2:-1].Event1.item () in critical_events) == True and (actions.iloc[-3:-2].Event1.item () in critical_events) == False:
+        action_last = actions.iloc[-3:-2]
+    elif (actions.iloc[-1:].Event1.item () in critical_events) == True and (actions.iloc[-2:-1].Event1.item () in critical_events) == True and (actions.iloc[-3:-2].Event1.item () in critical_events) == True and (actions.iloc[-4:-3].Event1.item () in critical_events) == False:
+        action_last = actions.iloc[-4:-3]
+    elif (actions.iloc[-1:].Event1.item () in critical_events) == True and (actions.iloc[-2:-1].Event1.item () in critical_events) == True and (actions.iloc[-3:-2].Event1.item () in critical_events) == True and (actions.iloc[-4:-3].Event1.item () in critical_events) == True and (actions.iloc[-5:-4].Event1.item () in critical_events) == False:
+        action_last = actions.iloc[-5:-4]
+    
     #Find right frame of position data of this action (Snchronization of Event & Position data)
     start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
     end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
@@ -915,11 +922,20 @@ for row, attack in possessions.iterrows ():
             search_field1 ['difference'] = Difference1
             identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
         
-    
-    
-    
+
 #result of attack is shot on goal
-    elif attack.PossessionResult == 'ShotAtGoal1':
+    elif attack.PossessionResult == 'ShotAtGoal1' or attack.PossessionResult == 'ShotAtGoal2':
+        if action_last.Event1.item () == 'ShotAtGoal':
+            action_last = action_last
+        elif action_last.Event1.item () != 'ShotAtGoal' and actions.iloc[-2:-1].Event1.item () == 'ShotAtGoal':
+            action_last = actions.iloc[-2:-1]
+        elif action_last.Event1.item () != 'ShotAtGoal' and actions.iloc[-2:-1].Event1.item () != 'ShotAtGoal' and actions.iloc[-3:-2].Event1.item () == 'ShotAtGoal':
+            action_last = actions.iloc[-3:-2]
+
+            #Find right frame of position data of this action (Snchronization of Event & Position data)
+        start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
+        end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
+
         #First Player
         search_field1 = position_data[position_data['PersonId'] == (action_last.Player.item ())]
         search_field1 = search_field1[(search_field1['T_sec'] >= start_sync1) &
@@ -955,6 +971,7 @@ for row, attack in possessions.iterrows ():
 #result of attack is stoppage of play
 #result of attack is other
     elif action_last.Event1.item() == 'Offside':
+
         #1. identify the pass that led to the 
         if actions.iloc[-2:-1].Player.isnull ().item() == False and actions.iloc[-2:-1]['X-Position'].isnull ().item() == False:
             action_last = actions.iloc[-2:-1]
@@ -962,9 +979,13 @@ for row, attack in possessions.iterrows ():
             action_last = actions.iloc[-3:-2]
         elif  (actions.iloc[-2:-1].Player.isnull ().item() == True or actions.iloc[-2:-1]['X-Position'].isnull ().item() == True) and  (actions.iloc[-3:-2].Player.isnull ().item() == True or actions.iloc[-3:-2]['X-Position'].isnull ().item() == True) and  actions.iloc[-4:-3].Player.isnull ().item() == False and actions.iloc[-4:-3]['X-Position'].isnull ().item() == False:
             action_last = actions.iloc[-4:-3]
+        elif  (actions.iloc[-2:-1].Player.isnull ().item() == True or actions.iloc[-2:-1]['X-Position'].isnull ().item() == True) and  (actions.iloc[-3:-2].Player.isnull ().item() == True or actions.iloc[-3:-2]['X-Position'].isnull ().item() == True) and  (actions.iloc[-4:-3].Player.isnull ().item() == True or actions.iloc[-4:-3]['X-Position'].isnull ().item() == True) and actions.iloc[-5:-4].Player.isnull ().item() == False and actions.iloc[-5:-4]['X-Position'].isnull ().item() == False:
+            action_last = actions.iloc[-5:-4]
+        elif  (actions.iloc[-2:-1].Player.isnull ().item() == True or actions.iloc[-2:-1]['X-Position'].isnull ().item() == True) and  (actions.iloc[-3:-2].Player.isnull ().item() == True or actions.iloc[-3:-2]['X-Position'].isnull ().item() == True) and  (actions.iloc[-4:-3].Player.isnull ().item() == True or actions.iloc[-4:-3]['X-Position'].isnull ().item() == True) and (actions.iloc[-5:-4].Player.isnull ().item() == True or actions.iloc[-5:-4]['X-Position'].isnull ().item() == True) and actions.iloc[-6:-5].Player.isnull ().item() == False and actions.iloc[-6:-5]['X-Position'].isnull ().item() == False:
+            action_last = actions.iloc[-6:-5]
         else:
             identified_frame_end = None
-            
+        
         #2. find the first frame, where the ball is in the area (4-5m difference) of the freekick
         #Find right frame of position data of this action (Snchronization of Event & Position data)
         start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
@@ -1005,9 +1026,11 @@ for row, attack in possessions.iterrows ():
         #Search for Freekick after the offside --> needed for the location of the offside
         if event_data.loc[[actions.iloc[-1]['index'].item()]].Event1.item() == 'FreeKick':
             freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 1]]
-        elif  event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() == 'FreeKick':
+        elif  event_data.loc[[actions.iloc[-1]['index'].item()]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() == 'FreeKick':
+            freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 1]]
+        elif  event_data.loc[[actions.iloc[-1]['index'].item()]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() == 'FreeKick':
             freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 2]]
-        elif event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 3]].Event1.item() == 'FreeKick':
+        elif  event_data.loc[[actions.iloc[-1]['index'].item()]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 1]].Event1.item() != 'FreeKick' and  event_data.loc[[actions.iloc[-1]['index'].item() + 2]].Event1.item() != 'FreeKick' and event_data.loc[[actions.iloc[-1]['index'].item() + 3]].Event1.item() == 'FreeKick':
             freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 3]]
         else:
             freekick =  event_data.loc[[actions.iloc[-1]['index'].item() + 1]]
@@ -1047,9 +1070,9 @@ for row, attack in possessions.iterrows ():
             #Find right frame of position data of this action (Snchronization of Event & Position data)
             start_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  - 8
             end_sync1 = (((action_last.EventTime.item().hour)*60)*60) + ((action_last.EventTime.item ().minute)*60) + (action_last.EventTime.item().second) + ((action_last.EventTime.item ().microsecond)/1000000)  + 8
+        elif  actions.iloc[-1:]['X-Position'].isnull ().item() == True and actions.iloc[-2:-1]['X-Position'].isnull ().item() == True:
+            action_last = actions.iloc[-3:-2]
 
-            
-        
         if action_last.Player.isnull ().item() == True and action_last.Event1.item () == 'TacklingGame':
             #First Player
             search_field1 = position_data[position_data['PersonId'] == (action_last.Winner.item ())]
@@ -1085,10 +1108,10 @@ for row, attack in possessions.iterrows ():
                 difference1 = (((difference_player1_player2 * 10) + difference_player12_Origin )/11) **2
     
                 Difference1.append (difference1)
-        
+            
             search_field1 ['difference'] = Difference1
             identified_frame_end = search_field1[search_field1['difference'] == search_field1 ['difference'].min ()].T_sec_1.reset_index().loc [[0]].T_sec_1.item()
-            
+
         #2. last action is pass 
         elif action_last.Recipient.isnull ().item() == False and (action_last.Event1.item () == 'Play' or action_last.Event2.item () == 'Play'):
             #First Player
@@ -1355,6 +1378,11 @@ OnGroupPressure0_8  = []
 OnGroupPressure0_9  = []
 OnGroupPressure0_10  = []
 
+Ball_X_0 = []
+Ball_Y_0 = []
+Ballleader_X_0 = []
+Ballleader_Y_0 = []
+
 for row, attack in possessions.iterrows ():
     
     #calculation of timestamps for calculation of defensive pressure
@@ -1482,7 +1510,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure0_8 = max (Press_ongroup0_8)
         ongrouppressure0_9 = max (Press_ongroup0_9)
         ongrouppressure0_10 = max (Press_ongroup0_10)
-    
+        
+        ball_x_0 = ball0.X.item()
+        ball_y_0 = ball0.Y.item()
+        
+        ballleader_x_0 = group_attacker0_0.X.item()
+        ballleader_y_0 = group_attacker0_0.Y.item ()
     else:
         onballpressure0 = None
         ongrouppressure0_1 = None
@@ -1496,6 +1529,11 @@ for row, attack in possessions.iterrows ():
         ongrouppressure0_9 = None
         ongrouppressure0_10 = None
         
+        ball_x_0 = None
+        ball_y_0 = None
+        
+        ballleader_x_0 = None
+        ballleader_y_0 = None
 
     OnBallPressure0.append (onballpressure0)
     OnGroupPressure0_1.append (ongrouppressure0_1)
@@ -1508,6 +1546,11 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure0_8.append (ongrouppressure0_8)
     OnGroupPressure0_9.append (ongrouppressure0_9)
     OnGroupPressure0_10.append (ongrouppressure0_10)
+    
+    Ball_X_0.append (ball_x_0)
+    Ball_Y_0.append (ball_y_0)
+    Ballleader_X_0.append (ballleader_x_0)
+    Ballleader_Y_0.append (ballleader_y_0)
 #%%
 #Measurement for timestamp: 1
 
@@ -1522,6 +1565,11 @@ OnGroupPressure1_7  = []
 OnGroupPressure1_8  = []
 OnGroupPressure1_9  = []
 OnGroupPressure1_10  = []
+
+Ball_X_1 = []
+Ball_Y_1 = []
+Ballleader_X_1 = []
+Ballleader_Y_1 = []
 
 for row, attack in possessions.iterrows ():
     
@@ -1650,6 +1698,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure1_8 = max (Press_ongroup1_8)
         ongrouppressure1_9 = max (Press_ongroup1_9)
         ongrouppressure1_10 = max (Press_ongroup1_10)
+        
+        ball_x_1 = ball1.X.item()
+        ball_y_1 = ball1.Y.item()
+    
+        ballleader_x_1 = group_attacker1_0.X.item()
+        ballleader_y_1 = group_attacker1_0.Y.item ()
     else:
         onballpressure1 = None
         ongrouppressure1_1 = None
@@ -1662,6 +1716,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure1_8 = None
         ongrouppressure1_9 = None
         ongrouppressure1_10 = None
+        
+        ball_x_1 = None
+        ball_y_1 = None
+        
+        ballleader_x_1 = None
+        ballleader_y_1 = None
 
     OnBallPressure1.append (onballpressure1)
     OnGroupPressure1_1.append (ongrouppressure1_1)
@@ -1674,6 +1734,11 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure1_8.append (ongrouppressure1_8)
     OnGroupPressure1_9.append (ongrouppressure1_9)
     OnGroupPressure1_10.append (ongrouppressure1_10)
+    
+    Ball_X_1.append (ball_x_1)
+    Ball_Y_1.append (ball_y_1)
+    Ballleader_X_1.append (ballleader_x_1)
+    Ballleader_Y_1.append (ballleader_y_1)
 #%%
 #Measurement for timestamp: 2
 
@@ -1688,6 +1753,11 @@ OnGroupPressure2_7  = []
 OnGroupPressure2_8  = []
 OnGroupPressure2_9  = []
 OnGroupPressure2_10  = []
+
+Ball_X_2 = []
+Ball_Y_2 = []
+Ballleader_X_2 = []
+Ballleader_Y_2 = []
 
 for row, attack in possessions.iterrows ():
     
@@ -1817,6 +1887,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure2_9 = max (Press_ongroup2_9)
         ongrouppressure2_10 = max (Press_ongroup2_10)
         
+        ball_x_2 = ball2.X.item()
+        ball_y_2 = ball2.Y.item()
+        
+        ballleader_x_2 = group_attacker2_0.X.item()
+        ballleader_y_2 = group_attacker2_0.Y.item ()
+        
     else:
         onballpressure2 = None
         ongrouppressure2_1 = None
@@ -1829,6 +1905,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure2_8 = None
         ongrouppressure2_9 = None
         ongrouppressure2_10 = None
+        
+        ball_x_2 = None
+        ball_y_2 = None
+        
+        ballleader_x_2 = None
+        ballleader_y_2 = None
 
     OnBallPressure2.append (onballpressure2)
     OnGroupPressure2_1.append (ongrouppressure2_1)
@@ -1842,6 +1924,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure2_9.append (ongrouppressure2_9)
     OnGroupPressure2_10.append (ongrouppressure2_10)
 
+    Ball_X_2.append (ball_x_2)
+    Ball_Y_2.append (ball_y_2)
+    Ballleader_X_2.append (ballleader_x_2)
+    Ballleader_Y_2.append (ballleader_y_2)
 
 #%%
 #Measurement for timestamp: 3
@@ -1857,6 +1943,11 @@ OnGroupPressure3_7  = []
 OnGroupPressure3_8  = []
 OnGroupPressure3_9  = []
 OnGroupPressure3_10  = []
+
+Ball_X_3 = []
+Ball_Y_3 = []
+Ballleader_X_3 = []
+Ballleader_Y_3 = []
 
 for row, attack in possessions.iterrows ():
     
@@ -1985,6 +2076,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure3_8 = max (Press_ongroup3_8)
         ongrouppressure3_9 = max (Press_ongroup3_9)
         ongrouppressure3_10 = max (Press_ongroup3_10)
+        
+        ball_x_3 = ball3.X.item()
+        ball_y_3 = ball3.Y.item()
+        
+        ballleader_x_3 = group_attacker3_0.X.item()
+        ballleader_y_3 = group_attacker3_0.Y.item ()
     else:
         onballpressure3 = None
         ongrouppressure3_1 = None
@@ -1998,6 +2095,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure3_9 = None
         ongrouppressure3_10 = None
 
+        ball_x_3 = None
+        ball_y_3 = None
+        
+        ballleader_x_3 = None
+        ballleader_y_3 = None
+        
     OnBallPressure3.append (onballpressure3)
     OnGroupPressure3_1.append (ongrouppressure3_1)
     OnGroupPressure3_2.append (ongrouppressure3_2)
@@ -2010,6 +2113,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure3_9.append (ongrouppressure3_9)
     OnGroupPressure3_10.append (ongrouppressure3_10)
 
+    Ball_X_3.append (ball_x_3)
+    Ball_Y_3.append (ball_y_3)
+    Ballleader_X_3.append (ballleader_x_3)
+    Ballleader_Y_3.append (ballleader_y_3)
 #%%
 #Measurement for timestamp: 4
 
@@ -2024,6 +2131,11 @@ OnGroupPressure4_7  = []
 OnGroupPressure4_8  = []
 OnGroupPressure4_9  = []
 OnGroupPressure4_10  = []
+
+Ball_X_4 = []
+Ball_Y_4 = []
+Ballleader_X_4 = []
+Ballleader_Y_4 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 4:
@@ -2152,6 +2264,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure4_8 = max (Press_ongroup4_8)
             ongrouppressure4_9 = max (Press_ongroup4_9)
             ongrouppressure4_10 = max (Press_ongroup4_10)
+            
+            ball_x_4 = ball4.X.item()
+            ball_y_4 = ball4.Y.item()
+        
+            ballleader_x_4 = group_attacker4_0.X.item()
+            ballleader_y_4 = group_attacker4_0.Y.item ()
         else:
             onballpressure4 = None
             ongrouppressure4_1 = None
@@ -2164,6 +2282,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure4_8 = None
             ongrouppressure4_9 = None
             ongrouppressure4_10 = None
+            
+            ball_x_4 = None
+            ball_y_4 = None
+        
+            ballleader_x_4 = None
+            ballleader_y_4 = None
     else: 
         onballpressure4 = None
         ongrouppressure4_1 = None
@@ -2176,6 +2300,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure4_8 = None
         ongrouppressure4_9 = None
         ongrouppressure4_10 = None
+        
+        ball_x_4 = None
+        ball_y_4 = None
+        
+        ballleader_x_4 = None
+        ballleader_y_4 = None
 
     OnBallPressure4.append (onballpressure4)
     OnGroupPressure4_1.append (ongrouppressure4_1)
@@ -2189,6 +2319,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure4_9.append (ongrouppressure4_9)
     OnGroupPressure4_10.append (ongrouppressure4_10)
 
+    Ball_X_4.append (ball_x_4)
+    Ball_Y_4.append (ball_y_4)
+    Ballleader_X_4.append (ballleader_x_4)
+    Ballleader_Y_4.append (ballleader_y_4)
 #%%
 #Measurement for timestamp: 5
 
@@ -2203,6 +2337,11 @@ OnGroupPressure5_7  = []
 OnGroupPressure5_8  = []
 OnGroupPressure5_9  = []
 OnGroupPressure5_10  = []
+
+Ball_X_5 = []
+Ball_Y_5 = []
+Ballleader_X_5 = []
+Ballleader_Y_5 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 5:
@@ -2331,6 +2470,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure5_8 = max (Press_ongroup5_8)
             ongrouppressure5_9 = max (Press_ongroup5_9)
             ongrouppressure5_10 = max (Press_ongroup5_10)
+            
+            ball_x_5 = ball5.X.item()
+            ball_y_5 = ball5.Y.item()
+        
+            ballleader_x_5 = group_attacker5_0.X.item()
+            ballleader_y_5 = group_attacker5_0.Y.item ()
         else:
             onballpressure5 = None
             ongrouppressure5_1 = None
@@ -2343,6 +2488,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure5_8 = None
             ongrouppressure5_9 = None
             ongrouppressure5_10 = None
+            
+            ball_x_5 = None
+            ball_y_5 = None
+            
+            ballleader_x_5 = None
+            ballleader_y_5 = None
     else: 
         onballpressure5 = None
         ongrouppressure5_1 = None
@@ -2355,6 +2506,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure5_8 = None
         ongrouppressure5_9 = None
         ongrouppressure5_10 = None
+        
+        ball_x_5 = None
+        ball_y_5 = None
+        
+        ballleader_x_5 = None
+        ballleader_y_5 = None
 
     OnBallPressure5.append (onballpressure5)
     OnGroupPressure5_1.append (ongrouppressure5_1)
@@ -2368,6 +2525,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure5_9.append (ongrouppressure5_9)
     OnGroupPressure5_10.append (ongrouppressure5_10)
 
+    Ball_X_5.append (ball_x_5)
+    Ball_Y_5.append (ball_y_5)
+    Ballleader_X_5.append (ballleader_x_5)
+    Ballleader_Y_5.append (ballleader_y_5)
 #%%
 #Measurement for timestamp: 6
 
@@ -2382,6 +2543,11 @@ OnGroupPressure6_7  = []
 OnGroupPressure6_8  = []
 OnGroupPressure6_9  = []
 OnGroupPressure6_10  = []
+
+Ball_X_6 = []
+Ball_Y_6 = []
+Ballleader_X_6 = []
+Ballleader_Y_6 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 6:
@@ -2510,6 +2676,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure6_8 = max (Press_ongroup6_8)
             ongrouppressure6_9 = max (Press_ongroup6_9)
             ongrouppressure6_10 = max (Press_ongroup6_10)
+            
+            ball_x_6 = ball6.X.item()
+            ball_y_6 = ball6.Y.item()
+        
+            ballleader_x_6 = group_attacker6_0.X.item()
+            ballleader_y_6 = group_attacker6_0.Y.item ()
         else:
             onballpressure6 = None
             ongrouppressure6_1 = None
@@ -2522,6 +2694,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure6_8 = None
             ongrouppressure6_9 = None
             ongrouppressure6_10 = None
+            
+            ball_x_6 = None
+            ball_y_6 = None
+        
+            ballleader_x_6 = None
+            ballleader_y_6 = None
     else: 
         onballpressure6 = None
         ongrouppressure6_1 = None
@@ -2534,6 +2712,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure6_8 = None
         ongrouppressure6_9 = None
         ongrouppressure6_10 = None
+        
+        ball_x_6 = None
+        ball_y_6 = None
+        
+        ballleader_x_6 = None
+        ballleader_y_6 = None
 
     OnBallPressure6.append (onballpressure6)
     OnGroupPressure6_1.append (ongrouppressure6_1)
@@ -2547,6 +2731,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure6_9.append (ongrouppressure6_9)
     OnGroupPressure6_10.append (ongrouppressure6_10)
     
+    Ball_X_6.append (ball_x_6)
+    Ball_Y_6.append (ball_y_6)
+    Ballleader_X_6.append (ballleader_x_6)
+    Ballleader_Y_6.append (ballleader_y_6)
 #%%
 #Measurement for timestamp: 7
 
@@ -2561,6 +2749,11 @@ OnGroupPressure7_7  = []
 OnGroupPressure7_8  = []
 OnGroupPressure7_9  = []
 OnGroupPressure7_10  = []
+
+Ball_X_7 = []
+Ball_Y_7 = []
+Ballleader_X_7 = []
+Ballleader_Y_7 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 7:
@@ -2702,6 +2895,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure7_8 = max(Press_ongroup7_8)
             ongrouppressure7_9 = max(Press_ongroup7_9)
             ongrouppressure7_10 = max(Press_ongroup7_10)
+            
+            ball_x_7 = ball7.X.item()
+            ball_y_7 = ball7.Y.item()
+        
+            ballleader_x_7 = group_attacker7_0.X.item()
+            ballleader_y_7 = group_attacker7_0.Y.item ()
         else:
             onballpressure7 = None
             ongrouppressure7_1 = None
@@ -2714,6 +2913,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure7_8 = None
             ongrouppressure7_9 = None
             ongrouppressure7_10 = None
+
+            ball_x_7 = None
+            ball_y_7 = None
+        
+            ballleader_x_7 = None
+            ballleader_y_7 = None
 
     else:
         onballpressure7 = None
@@ -2728,6 +2933,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure7_9 = None
         ongrouppressure7_10 = None
 
+        ball_x_7 = None
+        ball_y_7 = None
+        
+        ballleader_x_7 = None
+        ballleader_y_7 = None
+
     OnBallPressure7.append (onballpressure7)
     OnGroupPressure7_1.append (ongrouppressure7_1)
     OnGroupPressure7_2.append (ongrouppressure7_2)
@@ -2739,7 +2950,11 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure7_8.append (ongrouppressure7_8)
     OnGroupPressure7_9.append (ongrouppressure7_9)
     OnGroupPressure7_10.append (ongrouppressure7_10)
-        
+    
+    Ball_X_7.append (ball_x_7)
+    Ball_Y_7.append (ball_y_7)
+    Ballleader_X_7.append (ballleader_x_7)
+    Ballleader_Y_7.append (ballleader_y_7)
 #%%
 #Measurement for timestamp: 8
 
@@ -2754,6 +2969,11 @@ OnGroupPressure8_7  = []
 OnGroupPressure8_8  = []
 OnGroupPressure8_9  = []
 OnGroupPressure8_10  = []
+
+Ball_X_8 = []
+Ball_Y_8 = []
+Ballleader_X_8 = []
+Ballleader_Y_8 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 8:
@@ -2882,6 +3102,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure8_8 = max (Press_ongroup8_8)
             ongrouppressure8_9 = max (Press_ongroup8_9)
             ongrouppressure8_10 = max (Press_ongroup8_10)
+            
+            ball_x_8 = ball8.X.item()
+            ball_y_8 = ball8.Y.item()
+        
+            ballleader_x_8 = group_attacker8_0.X.item()
+            ballleader_y_8 = group_attacker8_0.Y.item ()
         else:
             onballpressure8 = None
             ongrouppressure8_1 = None
@@ -2894,6 +3120,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure8_8 = None
             ongrouppressure8_9 = None
             ongrouppressure8_10 = None
+            
+            ball_x_8 = None
+            ball_y_8 = None
+        
+            ballleader_x_8 = None
+            ballleader_y_8 = None
     else: 
         onballpressure8 = None
         ongrouppressure8_1 = None
@@ -2906,7 +3138,13 @@ for row, attack in possessions.iterrows ():
         ongrouppressure8_8 = None
         ongrouppressure8_9 = None
         ongrouppressure8_10 = None
-
+        
+        ball_x_8 = None
+        ball_y_8 = None
+        
+        ballleader_x_8 = None
+        ballleader_y_8 = None
+        
     OnBallPressure8.append (onballpressure8)
     OnGroupPressure8_1.append (ongrouppressure8_1)
     OnGroupPressure8_2.append (ongrouppressure8_2)
@@ -2919,6 +3157,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure8_9.append (ongrouppressure8_9)
     OnGroupPressure8_10.append (ongrouppressure8_10)
     
+    Ball_X_8.append (ball_x_8)
+    Ball_Y_8.append (ball_y_8)
+    Ballleader_X_8.append (ballleader_x_8)
+    Ballleader_Y_8.append (ballleader_y_8)
 #%%
 #Measurement for timestamp: 9
 
@@ -2933,6 +3175,11 @@ OnGroupPressure9_7  = []
 OnGroupPressure9_8  = []
 OnGroupPressure9_9  = []
 OnGroupPressure9_10  = []
+
+Ball_X_9 = []
+Ball_Y_9 = []
+Ballleader_X_9 = []
+Ballleader_Y_9 = []
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 9:
@@ -3061,6 +3308,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure9_8 = max (Press_ongroup9_8)
             ongrouppressure9_9 = max (Press_ongroup9_9)
             ongrouppressure9_10 = max (Press_ongroup9_10)
+            
+            ball_x_9 = ball9.X.item()
+            ball_y_9 = ball9.Y.item()
+        
+            ballleader_x_9 = group_attacker9_0.X.item()
+            ballleader_y_9 = group_attacker9_0.Y.item ()
         else:
             onballpressure9 = None
             ongrouppressure9_1 = None
@@ -3073,6 +3326,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure9_8 = None
             ongrouppressure9_9 = None
             ongrouppressure9_10 = None
+            
+            ball_x_9 = None
+            ball_y_9 = None
+        
+            ballleader_x_9 = None
+            ballleader_y_9 = None
     else: 
         onballpressure9 = None
         ongrouppressure9_1 = None
@@ -3085,6 +3344,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure9_8 = None
         ongrouppressure9_9 = None
         ongrouppressure9_10 = None
+        
+        ball_x_9 = None
+        ball_y_9 = None
+        
+        ballleader_x_9 = None
+        ballleader_y_9 = None
 
     OnBallPressure9.append (onballpressure9)
     OnGroupPressure9_1.append (ongrouppressure9_1)
@@ -3098,6 +3363,10 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure9_9.append (ongrouppressure9_9)
     OnGroupPressure9_10.append (ongrouppressure9_10)
     
+    Ball_X_9.append (ball_x_9)
+    Ball_Y_9.append (ball_y_9)
+    Ballleader_X_9.append (ballleader_x_9)
+    Ballleader_Y_9.append (ballleader_y_9)
 #%%
 #Measurement for timestamp: 10
 
@@ -3112,6 +3381,12 @@ OnGroupPressure10_7  = []
 OnGroupPressure10_8  = []
 OnGroupPressure10_9  = []
 OnGroupPressure10_10  = []
+
+Ball_X_10 = []
+Ball_Y_10 = []
+Ballleader_X_10 = []
+Ballleader_Y_10 = []
+
 
 for row, attack in possessions.iterrows ():
     if attack.duration_sync >= 10:
@@ -3240,6 +3515,12 @@ for row, attack in possessions.iterrows ():
             ongrouppressure10_8 = max (Press_ongroup10_8)
             ongrouppressure10_9 = max (Press_ongroup10_9)
             ongrouppressure10_10 = max (Press_ongroup10_10)
+            
+            ball_x_10 = ball10.X.item()
+            ball_y_10 = ball10.Y.item()
+        
+            ballleader_x_10 = group_attacker10_0.X.item()
+            ballleader_y_10 = group_attacker10_0.Y.item ()
         else:
             onballpressure10 = None
             ongrouppressure10_1 = None
@@ -3252,6 +3533,13 @@ for row, attack in possessions.iterrows ():
             ongrouppressure10_8 = None
             ongrouppressure10_9 = None
             ongrouppressure10_10 = None
+
+            ball_x_10 = None
+            ball_y_10 = None
+        
+            ballleader_x_10 = None
+            ballleader_y_10 = None
+        
     else: 
         onballpressure10 = None
         ongrouppressure10_1 = None
@@ -3265,6 +3553,12 @@ for row, attack in possessions.iterrows ():
         ongrouppressure10_9 = None
         ongrouppressure10_10 = None
 
+        ball_x_10 = None
+        ball_y_10 = None
+        
+        ballleader_x_10 = None
+        ballleader_y_10 = None
+        
     OnBallPressure10.append (onballpressure10)
     OnGroupPressure10_1.append (ongrouppressure10_1)
     OnGroupPressure10_2.append (ongrouppressure10_2)
@@ -3276,6 +3570,11 @@ for row, attack in possessions.iterrows ():
     OnGroupPressure10_8.append (ongrouppressure10_8)
     OnGroupPressure10_9.append (ongrouppressure10_9)
     OnGroupPressure10_10.append (ongrouppressure10_10)
+    
+    Ball_X_10.append (ball_x_10)
+    Ball_Y_10.append (ball_y_10)
+    Ballleader_X_10.append (ballleader_x_10)
+    Ballleader_Y_10.append (ballleader_y_10)
 #%%
 possessions['OnBallPressure0'] = OnBallPressure0
 possessions['OnGroupPressure0_1'] = OnGroupPressure0_1
@@ -3409,11 +3708,60 @@ possessions['OnGroupPressure10_8'] = OnGroupPressure10_8
 possessions['OnGroupPressure10_9'] = OnGroupPressure10_9
 possessions['OnGroupPressure10_10'] = OnGroupPressure10_10
 
+possessions['X_Position_Ball0'] = Ball_X_0
+possessions['Y_Position_Ball0'] = Ball_Y_0
+possessions['X_Position_Ballleader0'] = Ballleader_X_0
+possessions['Y_Position_Ballleader0'] = Ballleader_Y_0
+possessions['X_Position_Ball1'] = Ball_X_1
+possessions['Y_Position_Ball1'] = Ball_Y_1
+possessions['X_Position_Ballleader1'] = Ballleader_X_1
+possessions['Y_Position_Ballleader1'] = Ballleader_Y_1
+possessions['X_Position_Ball2'] = Ball_X_2
+possessions['Y_Position_Ball2'] = Ball_Y_2
+possessions['X_Position_Ballleader2'] = Ballleader_X_2
+possessions['Y_Position_Ballleader2'] = Ballleader_Y_2
+possessions['X_Position_Ball3'] = Ball_X_3
+possessions['Y_Position_Ball3'] = Ball_Y_3
+possessions['X_Position_Ballleader3'] = Ballleader_X_3
+possessions['Y_Position_Ballleader3'] = Ballleader_Y_3
+possessions['X_Position_Ball4'] = Ball_X_4
+possessions['Y_Position_Ball4'] = Ball_Y_4
+possessions['X_Position_Ballleader4'] = Ballleader_X_4
+possessions['Y_Position_Ballleader4'] = Ballleader_Y_4
+possessions['X_Position_Ball5'] = Ball_X_5
+possessions['Y_Position_Ball5'] = Ball_Y_5
+possessions['X_Position_Ballleader5'] = Ballleader_X_5
+possessions['Y_Position_Ballleader5'] = Ballleader_Y_5
+possessions['X_Position_Ball6'] = Ball_X_6
+possessions['Y_Position_Ball6'] = Ball_Y_6
+possessions['X_Position_Ballleader6'] = Ballleader_X_6
+possessions['Y_Position_Ballleader6'] = Ballleader_Y_6
+possessions['X_Position_Ball7'] = Ball_X_7
+possessions['Y_Position_Ball7'] = Ball_Y_7
+possessions['X_Position_Ballleader7'] = Ballleader_X_7
+possessions['Y_Position_Ballleader7'] = Ballleader_Y_7
+possessions['X_Position_Ball8'] = Ball_X_8
+possessions['Y_Position_Ball8'] = Ball_Y_8
+possessions['X_Position_Ballleader8'] = Ballleader_X_8
+possessions['Y_Position_Ballleader8'] = Ballleader_Y_8
+possessions['X_Position_Ball9'] = Ball_X_9
+possessions['Y_Position_Ball9'] = Ball_Y_9
+possessions['X_Position_Ballleader9'] = Ballleader_X_9
+possessions['Y_Position_Ballleader9'] = Ballleader_Y_9
+possessions['X_Position_Ball10'] = Ball_X_10
+possessions['Y_Position_Ball10'] = Ball_Y_10
+possessions['X_Position_Ballleader10'] = Ballleader_X_10
+possessions['Y_Position_Ballleader10'] = Ballleader_Y_10
+
+
 #%% Calculation of end of an attack in last/middle/first third?
 
 Third = []
 for idx, attack in possessions.iterrows ():
-    if attack.team == attack.TeamLeft:
+    if math.isnan (attack.X_Position_OfLastDefensiveAction) == True:
+        third = None
+
+    elif attack.team == attack.TeamLeft:
         if attack.X_Position_OfLastDefensiveAction >= 70:
             third = 'LastThird'
         elif attack.X_Position_OfLastDefensiveAction >= 35:
@@ -3434,6 +3782,225 @@ for idx, attack in possessions.iterrows ():
 
 possessions['Third_OfLastDefensiveAction'] = Third
 
+#%% Calculation of aligned x & y position (mirrored):
+    #x= 0 is the goal the ball possessing team is playing on
+    #x= 105 is the own goal (of ball possessing team)
+
+Ball_X_0_mirrored = []
+Ballleader_X_0_mirrored = []
+Ball_X_1_mirrored = []
+Ballleader_X_1_mirrored = []
+Ball_X_2_mirrored = []
+Ballleader_X_2_mirrored = []
+Ball_X_3_mirrored = []
+Ballleader_X_3_mirrored = []
+Ball_X_4_mirrored = []
+Ballleader_X_4_mirrored = []
+Ball_X_5_mirrored = []
+Ballleader_X_5_mirrored = []
+Ball_X_6_mirrored = []
+Ballleader_X_6_mirrored = []
+Ball_X_7_mirrored = []
+Ballleader_X_7_mirrored = []
+Ball_X_8_mirrored = []
+Ballleader_X_8_mirrored = []
+Ball_X_9_mirrored = []
+Ballleader_X_9_mirrored = []
+Ball_X_10_mirrored = []
+Ballleader_X_10_mirrored = []
+
+for idx, attack in possessions.iterrows ():
+    if math.isnan (attack.X_Position_Ball0) == True:
+        ball_x_0_mirrored = None
+        ballleader_x_0_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_0_mirrored = 105 - attack.X_Position_Ball0
+        ballleader_x_0_mirrored = 105 - attack.X_Position_Ballleader0
+    elif attack.team == attack.TeamRight:
+        ball_x_0_mirrored = attack.X_Position_Ball0
+        ballleader_x_0_mirrored = attack.X_Position_Ballleader0
+    else:
+        ball_x_0_mirrored = None
+        ballleader_x_0_mirrored = None
+    Ball_X_0_mirrored.append (ball_x_0_mirrored)
+    Ballleader_X_0_mirrored.append (ballleader_x_0_mirrored)
+
+    if math.isnan (attack.X_Position_Ball1) == True:
+        ball_x_1_mirrored = None
+        ballleader_x_1_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_1_mirrored = 105 - attack.X_Position_Ball1
+        ballleader_x_1_mirrored = 105 - attack.X_Position_Ballleader1
+    elif attack.team == attack.TeamRight:
+        ball_x_1_mirrored = attack.X_Position_Ball1
+        ballleader_x_1_mirrored = attack.X_Position_Ballleader1
+    else:
+        ball_x_1_mirrored = None
+        ballleader_x_1_mirrored = None
+    Ball_X_1_mirrored.append (ball_x_1_mirrored)
+    Ballleader_X_1_mirrored.append (ballleader_x_1_mirrored)
+
+    if math.isnan (attack.X_Position_Ball2) == True:
+        ball_x_2_mirrored = None
+        ballleader_x_2_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_2_mirrored = 105 - attack.X_Position_Ball2
+        ballleader_x_2_mirrored = 105 - attack.X_Position_Ballleader2
+    elif attack.team == attack.TeamRight:
+        ball_x_2_mirrored = attack.X_Position_Ball2
+        ballleader_x_2_mirrored = attack.X_Position_Ballleader2
+    else:
+        ball_x_2_mirrored = None
+        ballleader_x_2_mirrored = None
+    Ball_X_2_mirrored.append (ball_x_2_mirrored)
+    Ballleader_X_2_mirrored.append (ballleader_x_2_mirrored)
+    
+    if math.isnan (attack.X_Position_Ball3) == True:
+        ball_x_3_mirrored = None
+        ballleader_x_3_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_3_mirrored = 105 - attack.X_Position_Ball3
+        ballleader_x_3_mirrored = 105 - attack.X_Position_Ballleader3
+    elif attack.team == attack.TeamRight:
+        ball_x_3_mirrored = attack.X_Position_Ball3
+        ballleader_x_3_mirrored = attack.X_Position_Ballleader3
+    else:
+        ball_x_3_mirrored = None
+        ballleader_x_3_mirrored = None
+    Ball_X_3_mirrored.append (ball_x_3_mirrored)
+    Ballleader_X_3_mirrored.append (ballleader_x_3_mirrored)
+
+    if math.isnan (attack.X_Position_Ball4) == True:
+        ball_x_4_mirrored = None
+        ballleader_x_4_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_4_mirrored = 105 - attack.X_Position_Ball4
+        ballleader_x_4_mirrored = 105 - attack.X_Position_Ballleader4
+    elif attack.team == attack.TeamRight:
+        ball_x_4_mirrored = attack.X_Position_Ball4
+        ballleader_x_4_mirrored = attack.X_Position_Ballleader4
+    else:
+        ball_x_4_mirrored = None
+        ballleader_x_4_mirrored = None
+    Ball_X_4_mirrored.append (ball_x_4_mirrored)
+    Ballleader_X_4_mirrored.append (ballleader_x_4_mirrored)
+
+    if math.isnan (attack.X_Position_Ball5) == True:
+        ball_x_5_mirrored = None
+        ballleader_x_5_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_5_mirrored = 105 - attack.X_Position_Ball5
+        ballleader_x_5_mirrored = 105 - attack.X_Position_Ballleader5
+    elif attack.team == attack.TeamRight:
+        ball_x_5_mirrored = attack.X_Position_Ball5
+        ballleader_x_5_mirrored = attack.X_Position_Ballleader5
+    else:
+        ball_x_5_mirrored = None
+        ballleader_x_5_mirrored = None
+    Ball_X_5_mirrored.append (ball_x_5_mirrored)
+    Ballleader_X_5_mirrored.append (ballleader_x_5_mirrored)
+
+    if math.isnan (attack.X_Position_Ball6) == True:
+        ball_x_6_mirrored = None
+        ballleader_x_6_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_6_mirrored = 105 - attack.X_Position_Ball6
+        ballleader_x_6_mirrored = 105 - attack.X_Position_Ballleader6
+    elif attack.team == attack.TeamRight:
+        ball_x_6_mirrored = attack.X_Position_Ball6
+        ballleader_x_6_mirrored = attack.X_Position_Ballleader6
+    else:
+        ball_x_6_mirrored = None
+        ballleader_x_6_mirrored = None
+    Ball_X_6_mirrored.append (ball_x_6_mirrored)
+    Ballleader_X_6_mirrored.append (ballleader_x_6_mirrored)
+
+    if math.isnan (attack.X_Position_Ball7) == True:
+        ball_x_7_mirrored = None
+        ballleader_x_7_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_7_mirrored = 105 - attack.X_Position_Ball7
+        ballleader_x_7_mirrored = 105 - attack.X_Position_Ballleader7
+    elif attack.team == attack.TeamRight:
+        ball_x_7_mirrored = attack.X_Position_Ball7
+        ballleader_x_7_mirrored = attack.X_Position_Ballleader7
+    else:
+        ball_x_7_mirrored = None
+        ballleader_x_7_mirrored = None
+    Ball_X_7_mirrored.append (ball_x_7_mirrored)
+    Ballleader_X_7_mirrored.append (ballleader_x_7_mirrored)
+
+    if math.isnan (attack.X_Position_Ball8) == True:
+        ball_x_8_mirrored = None
+        ballleader_x_8_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_8_mirrored = 105 - attack.X_Position_Ball8
+        ballleader_x_8_mirrored = 105 - attack.X_Position_Ballleader8
+    elif attack.team == attack.TeamRight:
+        ball_x_8_mirrored = attack.X_Position_Ball8
+        ballleader_x_8_mirrored = attack.X_Position_Ballleader8
+    else:
+        ball_x_8_mirrored = None
+        ballleader_x_8_mirrored = None
+    Ball_X_8_mirrored.append (ball_x_8_mirrored)
+    Ballleader_X_8_mirrored.append (ballleader_x_8_mirrored)
+
+    if math.isnan (attack.X_Position_Ball9) == True:
+        ball_x_9_mirrored = None
+        ballleader_x_9_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_9_mirrored = 105 - attack.X_Position_Ball9
+        ballleader_x_9_mirrored = 105 - attack.X_Position_Ballleader9
+    elif attack.team == attack.TeamRight:
+        ball_x_9_mirrored = attack.X_Position_Ball9
+        ballleader_x_9_mirrored = attack.X_Position_Ballleader9
+    else:
+        ball_x_9_mirrored = None
+        ballleader_x_9_mirrored = None
+    Ball_X_9_mirrored.append (ball_x_9_mirrored)
+    Ballleader_X_9_mirrored.append (ballleader_x_9_mirrored)
+    
+    if math.isnan (attack.X_Position_Ball10) == True:
+        ball_x_10_mirrored = None
+        ballleader_x_10_mirrored = None
+    elif attack.team == attack.TeamLeft:
+        ball_x_10_mirrored = 105 - attack.X_Position_Ball10
+        ballleader_x_10_mirrored = 105 - attack.X_Position_Ballleader10
+    elif attack.team == attack.TeamRight:
+        ball_x_10_mirrored = attack.X_Position_Ball10
+        ballleader_x_10_mirrored = attack.X_Position_Ballleader10
+    else:
+        ball_x_10_mirrored = None
+        ballleader_x_10_mirrored = None
+    Ball_X_10_mirrored.append (ball_x_10_mirrored)
+    Ballleader_X_10_mirrored.append (ballleader_x_10_mirrored)
+
+
+possessions['X_Position_Ball0_mirrored'] = Ball_X_0_mirrored
+possessions['X_Position_Ballleader0_mirrored'] = Ballleader_X_0_mirrored
+possessions['X_Position_Ball1_mirrored'] = Ball_X_1_mirrored
+possessions['X_Position_Ballleader1_mirrored'] = Ballleader_X_1_mirrored
+possessions['X_Position_Ball2_mirrored'] = Ball_X_2_mirrored
+possessions['X_Position_Ballleader2_mirrored'] = Ballleader_X_2_mirrored
+possessions['X_Position_Ball3_mirrored'] = Ball_X_3_mirrored
+possessions['X_Position_Ballleader3_mirrored'] = Ballleader_X_3_mirrored
+possessions['X_Position_Ball4_mirrored'] = Ball_X_4_mirrored
+possessions['X_Position_Ballleader4_mirrored'] = Ballleader_X_4_mirrored
+possessions['X_Position_Ball5_mirrored'] = Ball_X_5_mirrored
+possessions['X_Position_Ballleader5_mirrored'] = Ballleader_X_5_mirrored
+possessions['X_Position_Ball6_mirrored'] = Ball_X_6_mirrored
+possessions['X_Position_Ballleader6_mirrored'] = Ballleader_X_6_mirrored
+possessions['X_Position_Ball7_mirrored'] = Ball_X_7_mirrored
+possessions['X_Position_Ballleader7_mirrored'] = Ballleader_X_7_mirrored
+possessions['X_Position_Ball8_mirrored'] = Ball_X_8_mirrored
+possessions['X_Position_Ballleader8_mirrored'] = Ballleader_X_8_mirrored
+possessions['X_Position_Ball9_mirrored'] = Ball_X_9_mirrored
+possessions['X_Position_Ballleader9_mirrored'] = Ballleader_X_9_mirrored
+possessions['X_Position_Ball10_mirrored'] = Ball_X_10_mirrored
+possessions['X_Position_Ballleader10_mirrored'] = Ballleader_X_10_mirrored
+
+
+
 #%% Safe the result Dataframe 'possessions'
 
-possessions.to_csv (r'result_possessions_timepoints_Game18.csv')
+possessions.to_csv (r'result_possessions_timepoints_Game1.csv')
